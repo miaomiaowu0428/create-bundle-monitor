@@ -2,23 +2,52 @@ use create_bundle_monitor::BundleStore;
 use solana_ix_collection::system_ix::cu_budget::SetComputUnitLimit;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let cu_target: u32 = std::env::args()
-        .nth(1)
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(140_000);
+    // 解析命令行参数
+    let args: Vec<String> = std::env::args().collect();
+    let mut cu_target: u32 = 140_000;
+    let mut db_path = "./pump_bundles_db".to_string();
+    let mut follow_count: Option<usize> = None;
 
-    let db_path = std::env::args()
-        .nth(2)
-        .unwrap_or_else(|| "./pump_bundles_db".to_string());
+    let mut i = 1;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--follow-count" => {
+                if i + 1 < args.len() {
+                    follow_count = args[i + 1].parse().ok();
+                    i += 2;
+                } else {
+                    eprintln!("⚠️  --follow-count requires a value");
+                    i += 1;
+                }
+            }
+            arg => {
+                // 位置参数：先是 cu_target，再是 db_path
+                if arg.parse::<u32>().is_ok() && cu_target == 140_000 {
+                    cu_target = arg.parse().unwrap();
+                } else if !arg.starts_with("--") {
+                    db_path = arg.to_string();
+                }
+                i += 1;
+            }
+        }
+    }
 
     println!("📁 Opening database: {}", db_path);
-    println!("🎯 Target CU limit: {}\n", cu_target);
+    println!("🎯 Target CU limit: {}", cu_target);
+    if let Some(count) = follow_count {
+        println!("📊 Follow count filter: exactly {} txs", count);
+    }
+    println!();
 
     let store = BundleStore::open(&db_path)?;
     let bundles = store.list_all()?;
 
     println!("📦 Total bundles: {}", bundles.len());
-    println!("🔍 Filtering bundles where ALL follow txs have CU limit = {}...\n", cu_target);
+    print!("🔍 Filtering bundles where ALL follow txs have CU limit = {}", cu_target);
+    if let Some(count) = follow_count {
+        print!(" AND follow count = {}", count);
+    }
+    println!("...\n");
 
     let mut matched_mints = Vec::new();
 
@@ -26,6 +55,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // 跳过没有 follow 交易的 bundle
         if bundle.follow_txs.is_empty() {
             continue;
+        }
+
+        // 检查 follow 数量（如果指定了过滤条件）
+        if let Some(expected_count) = follow_count {
+            if bundle.follow_txs.len() != expected_count {
+                continue;
+            }
         }
 
         // 检查所有 follow 交易是否都有目标 CU limit
@@ -61,6 +97,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("═══════════════════════════════════════════════════════════");
     println!("📊 Summary:");
     println!("   Target CU limit:  {}", cu_target);
+    if let Some(count) = follow_count {
+        println!("   Follow count:     {}", count);
+    }
     println!("   Total bundles:    {}", bundles.len());
     println!("   Matched bundles:  {}", matched_mints.len());
     println!("   Match rate:       {:.2}%", 
