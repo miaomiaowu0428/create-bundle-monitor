@@ -16,7 +16,7 @@ grpc-client = { git = "https://github.com/miaomiaowu0428/grpc-client.git" }
 dotenvy = "0.15.7"
 log = "0.4.29"
 rustls = "0.23.36"
-sled = "0.34.7"
+heed = { version = "0.20", features = ["serde-bincode"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 borsh = "1.6.0"
