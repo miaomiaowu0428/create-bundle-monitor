@@ -40,7 +40,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .iter()
                 .find_map(SetComputUnitLimit::from_indexed_instruction)
             {
-                if cu_limit_ix.units == 150_000 * buy_count as u64 + 50000 {
+                if cu_limit_ix.units == 150_000 * buy_count as u32 + 50000 {
                     println!("{}", bundle.mint);
                 }
             }
