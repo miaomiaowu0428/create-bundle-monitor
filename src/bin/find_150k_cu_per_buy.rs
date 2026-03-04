@@ -35,12 +35,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .filter_map(PumpBuyIx::from_indexed_instruction)
                 .collect::<Vec<_>>()
                 .len();
+            println!("follow buy count: {buy_count}");
             if let Some(cu_limit_ix) = tx
                 .flattened_ixs
                 .iter()
                 .find_map(SetComputUnitLimit::from_indexed_instruction)
             {
-                if cu_limit_ix.units == 150_000 * buy_count as u32 + 50000 {
+                if cu_limit_ix.units == 150_000 * buy_count as u32 + 50_000 {
                     println!("{}", bundle.mint);
                 }
             }
