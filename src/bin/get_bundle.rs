@@ -33,7 +33,7 @@ fn format_cu_limit(cu: Option<u32>) -> String {
 /// 格式化 CU price (micro-lamports 转换为 lamports)
 fn format_cu_price(price: Option<u64>) -> String {
     match price {
-        Some(p) => format!("{} Lamports",  p as f64 / 1_000_000.0 ),
+        Some(p) => format!("{} Lamports", p as f64 / 1_000_000.0),
         None => "N/A".to_string(),
     }
 }
@@ -69,7 +69,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "  Instructions: {} instructions",
                 bundle.create_tx.flattened_ixs.len()
             );
-            
+
             // 提取并显示 CU 信息
             let (cu_limit, cu_price) = extract_cu_info(&bundle.create_tx);
             println!("  CU Limit:  {}", format_cu_limit(cu_limit));
@@ -83,7 +83,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("    Index:     {}", tx.index);
                 println!("    Accounts:  {} accounts", tx.account_keys.len());
                 println!("    Instructions: {} instructions", tx.flattened_ixs.len());
-                
+
                 // 提取并显示 CU 信息
                 let (cu_limit, cu_price) = extract_cu_info(tx);
                 println!("    CU Limit:  {}", format_cu_limit(cu_limit));

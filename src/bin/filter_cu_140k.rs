@@ -39,15 +39,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("✅ Mint: {}", bundle.mint);
             println!("   Create tx: {}", bundle.create_tx.signature);
             println!("   Follow txs: {}", bundle.follow_txs.len());
-            
+
             // 显示每个 follow 交易的详细信息
             for (i, tx) in bundle.follow_txs.iter().enumerate() {
                 // 找到 CU limit 指令并显示
-                let cu_info = tx.flattened_ixs.iter()
+                let cu_info = tx
+                    .flattened_ixs
+                    .iter()
                     .find_map(|ix| SetComputUnitLimit::from_indexed_instruction(ix))
                     .map(|cu| cu.units)
                     .unwrap_or(0);
-                
+
                 println!("     [{}] {} - CU: {}", i + 1, tx.signature, cu_info);
             }
             println!();
@@ -58,8 +60,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("📊 Summary:");
     println!("   Total bundles:   {}", bundles.len());
     println!("   Matched (140k):  {}", matched_count);
-    println!("   Match rate:      {:.2}%", 
-        if bundles.is_empty() { 0.0 } else { (matched_count as f64 / bundles.len() as f64) * 100.0 }
+    println!(
+        "   Match rate:      {:.2}%",
+        if bundles.is_empty() {
+            0.0
+        } else {
+            (matched_count as f64 / bundles.len() as f64) * 100.0
+        }
     );
 
     Ok(())
