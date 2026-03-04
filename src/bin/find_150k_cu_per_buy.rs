@@ -28,7 +28,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         {
             return Ok(());
         }
-        for tx in bundle.follow_txs {
+        for tx in &bundle.follow_txs {
             let buy_count = tx
                 .flattened_ixs
                 .iter()
