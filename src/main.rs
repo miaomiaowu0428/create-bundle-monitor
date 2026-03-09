@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use create_bundle_monitor::monitor::migrate_monitor::PumpMigrateMonitor;
 use create_bundle_monitor::monitor::PumpCreateBundleMonitor;
 use dotenvy::dotenv;
 use solana_sdk::pubkey;
@@ -23,20 +24,26 @@ async fn main() {
 
     let dispatcher = TxDispatcher::new();
 
-    // 4. 初始化monitor
+    // 4. 初始化 create-bundle monitor
     let monitor =
-        PumpCreateBundleMonitor::new("./pump_bundles_db").expect("Failed to create monitor");
-    log::info!("✅ Monitor initialized with database");
+        PumpCreateBundleMonitor::new("./pump_bundles_db").expect("Failed to create bundle monitor");
+    log::info!("✅ Bundle monitor initialized");
 
-    // 5. 注册订阅者
+    // 5. 初始化 migrate monitor
+    let migrate_monitor =
+        PumpMigrateMonitor::new("./migrate_db").expect("Failed to create migrate monitor");
+    log::info!("✅ Migrate monitor initialized");
+
+    // 6. 注册订阅者
     dispatcher.register(Arc::new(monitor));
-    log::info!("✅ Monitor registered to dispatcher");
+    dispatcher.register(Arc::new(migrate_monitor));
+    log::info!("✅ Monitors registered to dispatcher");
 
-    // 6. 设置过滤器
+    // 7. 设置过滤器
     dispatcher.with_account_filters(vec![pubkey!("6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P")]);
 
     log::info!("🚀 Starting dispatcher.run()...");
 
-    // 7. 启动监听（会无限运行）
+    // 8. 启动监听（会无限运行）
     dispatcher.run().await;
 }

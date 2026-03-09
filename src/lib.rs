@@ -7,6 +7,75 @@ use utils::IndexedInstruction;
 
 pub mod monitor;
 
+/// 已迁移 token 的记录
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct MigrateRecord {
+    pub mint: solana_sdk::pubkey::Pubkey,
+    pub signature: solana_sdk::signature::Signature,
+    pub slot: u64,
+}
+
+/// Migrate 存储管理器（LMDB，支持多进程读）
+pub struct MigrateStore {
+    env: heed::Env,
+    db: heed::Database<heed::types::Bytes, heed::types::SerdeBincode<MigrateRecord>>,
+}
+
+impl MigrateStore {
+    pub fn open(db_path: &str) -> Result<Self, Box<dyn std::error::Error>> {
+        std::fs::create_dir_all(db_path)?;
+        let env = unsafe {
+            heed::EnvOpenOptions::new()
+                .map_size(4 * 1024 * 1024 * 1024)
+                .max_dbs(1)
+                .open(db_path)?
+        };
+        let mut wtxn = env.write_txn()?;
+        let db = env.create_database(&mut wtxn, Some("migrated"))?;
+        wtxn.commit()?;
+        Ok(Self { env, db })
+    }
+
+    pub fn store(&self, record: &MigrateRecord) -> Result<(), Box<dyn std::error::Error>> {
+        let mut wtxn = self.env.write_txn()?;
+        let key = record.mint.to_bytes();
+        self.db.put(&mut wtxn, &key, record)?;
+        wtxn.commit()?;
+        Ok(())
+    }
+
+    pub fn get(
+        &self,
+        mint: &solana_sdk::pubkey::Pubkey,
+    ) -> Result<Option<MigrateRecord>, Box<dyn std::error::Error>> {
+        let rtxn = self.env.read_txn()?;
+        let key = mint.to_bytes();
+        Ok(self.db.get(&rtxn, &key)?)
+    }
+
+    pub fn contains(
+        &self,
+        mint: &solana_sdk::pubkey::Pubkey,
+    ) -> Result<bool, Box<dyn std::error::Error>> {
+        Ok(self.get(mint)?.is_some())
+    }
+
+    pub fn list_all(&self) -> Result<Vec<MigrateRecord>, Box<dyn std::error::Error>> {
+        let rtxn = self.env.read_txn()?;
+        let mut records = Vec::new();
+        for item in self.db.iter(&rtxn)? {
+            let (_, record) = item?;
+            records.push(record);
+        }
+        Ok(records)
+    }
+
+    pub fn count(&self) -> Result<usize, Box<dyn std::error::Error>> {
+        let rtxn = self.env.read_txn()?;
+        Ok(self.db.len(&rtxn)? as usize)
+    }
+}
+
 /// 交易信息 - 只存储关键数据
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TxInfo {
@@ -41,7 +110,7 @@ impl BundleStore {
         let env = unsafe {
             EnvOpenOptions::new()
                 .map_size(10 * 1024 * 1024 * 1024) // 10 GB
-                .max_dbs(1)
+                .max_dbs(2)
                 .open(db_path)?
         };
 
