@@ -1,12 +1,17 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use create_bundle_monitor::BundleStore;
+use dotenvy::dotenv;
+use log::info;
 use solana_ix_collection::pump::PumpBuyIx;
 use solana_sdk::{pubkey::Pubkey, signature::Signature};
 use transaction_cache::get_tx;
+use utils::init_logger;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    dotenv().ok();
+    init_logger();
     let args: Vec<String> = std::env::args().collect();
     let db_path = args
         .get(1)
@@ -14,14 +19,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap_or_else(|| "./pump_bundles_db".to_string());
     let in_hours: u64 = args.get(2).and_then(|s| s.parse().ok()).unwrap_or(12);
 
-    println!("📁 Opening database: {}", db_path);
-    println!("⏱ Filtering bundles created within last {} hours", in_hours);
+    info!("📁 Opening database: {}", db_path);
+    info!("⏱ Filtering bundles created within last {} hours", in_hours);
 
     let store = BundleStore::open(&db_path)?;
     let bundles = store.list_all()?;
 
-    println!("📦 Total bundles: {}", bundles.len());
-    println!("🔍 Filtering GNG5 bundles (max_sol_cost = u64::MAX)...\n");
+    info!("📦 Total bundles: {}", bundles.len());
+    info!("🔍 Filtering GNG5 bundles (max_sol_cost = u64::MAX)...\n");
 
     let mut matched_count = 0;
     let mut matched_pairs: Vec<(Pubkey, Signature)> = Vec::new();
@@ -63,9 +68,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             matched_pairs.push((bundle.mint, sig));
 
             matched_count += 1;
-            println!("✅ Mint: {}", bundle.mint);
-            println!("   Create tx: {}", bundle.create_tx.signature);
-            println!("   Follow txs: {}", bundle.follow_txs.len());
+            info!("✅ Mint: {}", bundle.mint);
+            info!("   Create tx: {}", bundle.create_tx.signature);
+            info!("   Follow txs: {}", bundle.follow_txs.len());
 
             // ========== 新增：解析 create_tx 中的 PumpBuyIx 指令 ==========
             // 提取 create_tx 中的所有 buy 指令
@@ -123,20 +128,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             let amount_breakdown = amount_parts.join(" + ");
 
-            println!("   📊 Summary:");
-            println!(
+            info!("   📊 Summary:");
+            info!(
                 "      Total token_amount: {:.2}M ({})",
                 total_m, amount_breakdown
             );
-            println!();
+            info!("");
         }
     }
 
-    println!("═══════════════════════════════════════════════════════════");
-    println!("📊 Final Summary:");
-    println!("   Total bundles:         {}", bundles.len());
-    println!("   Matched (GNG5):        {}", matched_count);
-    println!(
+    info!("═══════════════════════════════════════════════════════════");
+    info!("📊 Final Summary:");
+    info!("   Total bundles:         {}", bundles.len());
+    info!("   Matched (GNG5):        {}", matched_count);
+    info!(
         "   Match rate:            {:.2}%",
         if bundles.is_empty() {
             0.0
@@ -146,9 +151,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     if !matched_pairs.is_empty() {
-        println!("🔗 Matched token:sig pairs:");
+        info!("🔗 Matched token:sig pairs:");
         for (mint, sig) in &matched_pairs {
-            println!("   {} : {}", mint, sig);
+            info!("   {} : {}", mint, sig);
         }
     }
 
