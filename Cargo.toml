@@ -7,6 +7,7 @@ edition = "2024"
 solana-sdk = "3.0.0"
 tokio = "1.49.0"
 transaction-monitor = { git = "https://github.com/miaomiaowu0428/transaction-monitor.git" }
+transaction-cache = { git = "https://github.com/miaomiaowu0428/transaction-cache.git" }
 solana-tx-parser = { git = "https://github.com/miaomiaowu0428/solana-tx-parser.git" }
 solana-ix-collection = { git = "https://github.com/miaomiaowu0428/solana-ix-collection.git" }
 # transaction-monitor = {path = "../transaction-monitor"}
